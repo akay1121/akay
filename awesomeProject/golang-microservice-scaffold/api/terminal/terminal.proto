@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/api/annotations.proto";
+// We can tell the generator the field behaviors so that some fields would not appear
+// when regarded as input / output only fields
+import "google/api/field_behavior.proto";
+// Customize the method signature by importing the proto file
+import "google/api/client.proto";
+// We can import this protobuf file to use the timestamp data type in our code
+import "google/protobuf/timestamp.proto";
+// Import the file to return an empty message
+import "google/protobuf/empty.proto";
+// To generate the final product OpenAPI specification file, we shall import the annotations to tell the generator
+// to fill the corresponding fields so as to tell the developer how to use the APIs in a proper way.
+import "openapi/v3/annotations.proto";
+// To employ the validator like what the Spring framework does, we shall import the validate file provided by Envoy
+import "validate/validate.proto";
+// Any other protocol buffers definition files should also be imported explicitly
+import "user/v1/error_reason.proto";
+
+option go_package = "example/api/terminal;v1";
+option java_multiple_files = true; // Separate .java files will be generated for each of the Java classes/enums/etc.
+option java_package = "terminal.v1"; // The package which the generated code will be placed in
+option objc_class_prefix = "APITerminalV1"; // Objective-C class prefix
+
+
+option (openapi.v3.document) = {
+  info: {
+    title: "Terminal Management Service"
+    description: "A basic Terimnal management service for test"
+    version: "1.0.0"
+  }
+};
+
+service TerminalManagement{
+  rpc UpdateTerminalStatus(Terminal) returns (google.protobuf.Empty) {
+    // You should place the field name in the request path using the bracket notation {param} so that
+    // the generator can find the definition, if not so, it fails.
+    option (google.api.http) = {
+      put: "/terminal/{id}"
+      body: "*"
+    };
+    // We can add an option (google.api.method_signature) so that in some programming languages, a overload
+    // function would be generated as well rather than passing a request object.
+    option (google.api.method_signature) = "id";
+    option (openapi.v3.operation) = {
+      summary: "Update a terminal's status"
+      description:
+          "The service would first try to find if there exists a specific terminal by its id,"
+              "and if found, user's information is then updated."
+    };
+  }
+  rpc GetTerminalStatus(TerminalId) returns (Terminal) {
+    option (google.api.http) = {
+      get: "/terminal/{id}"
+    };
+    option (google.api.method_signature) = "id";
+    option (openapi.v3.operation) = {
+      summary: "Get a terminalStatus by its id"
+      description:
+         "User a terminal id to get the terminal's status"
+    };
+  }
+
+
+
+}
+message Terminal {
+  // Here we describe the schema of the User object
+  option (openapi.v3.schema) = {
+
+  };
+
+  int64 id = 1 [
+
+    (openapi.v3.property).description = "Unique identifier for the user"
+  ];
+  int32 timeout = 2 [
+
+    (openapi.v3.property).description = "Unique identifier for the user"
+  ];
+  string status = 3 [
+
+    (openapi.v3.property).description = "Unique identifier for the user"
+  ];}
+
+
+message TerminalId {
+  option (openapi.v3.schema).description = "TerminalId is a global unique identifier for each user";
+  int64 id = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (openapi.v3.property).description = "Unique identifier for each Terminal"
+  ];
+}

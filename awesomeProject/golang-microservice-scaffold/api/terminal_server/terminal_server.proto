@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package terminal;
+
+service TerminalService {
+  rpc GetTerminalStatus(TerminalRequest) returns (TerminalResponse);
+  rpc UpdateTerminal(TerminalUpdateRequest) returns (TerminalResponse);
+  rpc SetTerminalTimeout(TerminalTimeoutRequest) returns (TerminalResponse);
+}
+
+message TerminalRequest {
+  int32 id = 1;
+}
+
+message TerminalUpdateRequest {
+  int32 id = 1;
+  string status = 2;
+  int32 timeout = 3;
+}
+message TerminalTimeoutRequest {
+  int32 id = 1;
+  int32 timeout = 2;
+}
+
+message TerminalResponse {
+  int64 id = 1;
+  string status = 2;
+  int32 timeout = 3;
+  string message = 4;
+}

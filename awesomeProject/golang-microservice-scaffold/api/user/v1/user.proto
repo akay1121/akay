@@ -1,0 +1,241 @@
+// Copyright (c) 2024 Ryker Zhu
+//
+// Basic CRUD operations service example
+// You should skim the comments and the layout of this file so that you would quickly know what you should do
+// in your Protocol Buffers definition.
+
+
+// Use version 3 language syntax. Any proto file should start with this sentence.
+syntax = "proto3";
+// The package name is unique for each service
+package user.v1;
+
+// We shall import the 3rd party protocol buffers to generate both the HTTP server and the gRPC server code.
+import "google/api/annotations.proto";
+// We can tell the generator the field behaviors so that some fields would not appear
+// when regarded as input / output only fields
+import "google/api/field_behavior.proto";
+// Customize the method signature by importing the proto file
+import "google/api/client.proto";
+// We can import this protobuf file to use the timestamp data type in our code
+import "google/protobuf/timestamp.proto";
+// Import the file to return an empty message
+import "google/protobuf/empty.proto";
+// To generate the final product OpenAPI specification file, we shall import the annotations to tell the generator
+// to fill the corresponding fields so as to tell the developer how to use the APIs in a proper way.
+import "openapi/v3/annotations.proto";
+// To employ the validator like what the Spring framework does, we shall import the validate file provided by Envoy
+import "validate/validate.proto";
+// Any other protocol buffers definition files should also be imported explicitly
+import "user/v1/error_reason.proto";
+
+// You have to define the package names using the option keyword to make the Protocol Buffers compiler
+// follow the standard and generate the corresponding code.
+// NOTE: You should always place these lines in your code.
+
+// The Golang package name is defined with two parts:
+//  - the former is the full path of the package name
+//  - the latter is the explicit name for this package
+option go_package = "example/api/user/v1;v1";
+option java_multiple_files = true; // Separate .java files will be generated for each of the Java classes/enums/etc.
+option java_package = "user.v1"; // The package which the generated code will be placed in
+option objc_class_prefix = "APIUserV1"; // Objective-C class prefix
+
+// You should provide the information of this service by using the option (openapi.v3.document)
+option (openapi.v3.document) = {
+  info: {
+    title: "User Management Service"
+    description: "A basic user management service for example"
+    version: "1.0.0"
+  }
+};
+
+// NOTE:   would finally be transferred into the OpenAPI documentation
+
+// Here we define the service interfaces. It provides basic CRUD operations for your reference.
+// You should follow the pattern of the service declaration.
+service UserManagement {
+
+  // The service interfaces are defined by using the rpc keyword. The syntax is as follows:
+  //
+  //   rpc OperationName (InputStruct) returns (OutputStruct);
+  //
+  // Note that we should provide both the HTTP server and the gRPC server, and if you have not specified
+  // the HTTP interface, then the generated code would only contain the gRPC version.
+  // We can specify the HTTP interface by adding the option (google.api.http) = {<HTTP Method>: "/api/path"};
+  // The API path is same as what you would typically do in most frameworks like gin, Spring, etc.
+
+  rpc AddUser (User) returns (google.protobuf.Empty) {
+    // Map the RPC operation into a HTTP endpoint
+    option (google.api.http) = {
+      post: "/user"
+      // HTTP method POST and PUT should contain a body
+      body: "*"
+    };
+    option (openapi.v3.operation) = {
+      summary: "Add a user"
+      description: "Add a user to the system"
+    };
+  }
+
+  rpc UpdateUser(User) returns (google.protobuf.Empty) {
+    // You should place the field name in the request path using the bracket notation {param} so that
+    // the generator can find the definition, if not so, it fails.
+    option (google.api.http) = {
+      put: "/user/{id}"
+      body: "*"
+    };
+    // We can add an option (google.api.method_signature) so that in some programming languages, a overload
+    // function would be generated as well rather than passing a request object.
+    option (google.api.method_signature) = "id";
+    option (openapi.v3.operation) = {
+      summary: "Update a user's information"
+      description:
+          "The service would first try to find if there exists a specific user by its id,"
+          "and if found, user's information is then updated."
+    };
+  }
+
+  rpc FindUserByName(UserName) returns (User) {
+    option (google.api.http) = {
+      get: "/user/{name}"
+    };
+    option (google.api.method_signature) = "name";
+    option (openapi.v3.operation) = {
+      summary: "Find a user by its name"
+      description:
+          "For user login controllers, it is common to login by using user name and password rather than UserIds. "
+          "We should provide such an operation so that users can log into the system by their name and password."
+    };
+  }
+
+  rpc RemoveUserById(UserId) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/user/{id}"
+    };
+    option (google.api.method_signature) = "id";
+    option (openapi.v3.operation) = {
+      summary: "Remove a user by its id"
+      description:
+          "Remove a user (seemingly) by its UserId. Note that we would not truly delete the user in practice, "
+          "what we do is simply set the deleted flag to true. This design is aimed to audit the operation, "
+          "and we can recover the deleted user accounts at any time."
+    };
+  }
+}
+
+// User is the core Data Transfer Object, which is used by the API
+message User {
+  // Here we describe the schema of the User object
+  option (openapi.v3.schema) = {
+    description: "User represents an entity who has access to a specific range of APIs"
+  };
+
+  int64 id = 1 [
+    // We can use the following syntax to describe the field, which would finally appear in the OpenAPI documentation
+    (openapi.v3.property).description = "Unique identifier for the user"
+  ];
+  int64 parent_id = 2 [
+    (openapi.v3.property).description = "Identifier of the parent user group"
+  ];
+  enum Type {
+    NORMAL_USER = 0;
+    USER_GROUP = 1;
+  };
+  Type type = 3 [
+    // We shall make sure that the enum value is only the well-defined one
+    (validate.rules).enum = {defined_only: true},
+    (openapi.v3.property).description =
+        "All the objects including user groups are regarded as users, so we shall use this field to identify their type."
+  ];
+  string name = 4 [ // Username
+    // Validation rule for this field, restricting its length range
+    (validate.rules).string = {min_len: 3, max_len: 64},
+    (openapi.v3.property).description = "Username"
+  ];
+  optional string password = 5 [
+    // Use the field_behavior annotation to tell the generator that password would not appear in the output
+    (google.api.field_behavior) = INPUT_ONLY,
+    (validate.rules).string = {
+      min_len: 8
+      max_len: 64
+      // Note that the validator does not support lookarounds, so we do not check the password pattern here.
+    },
+    (openapi.v3.property) = {
+      description: "Raw password. In the database, this should be hashed password with salt."
+      min_length: 8
+      max_length: 64
+      pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,64}$"
+    }
+  ];
+  optional string two_fa_method = 6 [
+    (openapi.v3.property).description = "2FA validation method"
+  ];
+  optional string secret = 7 [
+    (google.api.field_behavior) = INPUT_ONLY,
+    (openapi.v3.property).description = "Secret value of 2FA or just an email address"
+  ];
+  optional string login_ip = 8 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (openapi.v3.property).description = "IP address of the last login time"
+  ];
+  optional google.protobuf.Timestamp last_login = 9 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (openapi.v3.property).description = "Date of the last login time"
+  ];
+  string nickname = 10 [
+    // We shall make sure the validation is only performed when the field is not empty
+    (validate.rules).string = {min_len: 3, max_len: 64, ignore_empty: true},
+    (openapi.v3.property).description = "Optional nickname for the user"
+  ];
+  string email = 11 [
+    // Use the predefined email validation
+    (validate.rules).string = {email: true, ignore_empty: true},
+    (openapi.v3.property).description = "Email address"
+  ];
+  optional string phone_number = 12 [
+    (validate.rules).string = {max_len: 15},
+    (openapi.v3.property).description = "Phone number"
+  ];
+  string avatar = 13 [
+    (openapi.v3.property).description = "Relative path of the avatar image"
+  ];
+  enum Gender {
+    UNKNOWN = 0;
+    MALE = 1;
+    FEMALE = 2;
+  };
+  optional Gender gender = 14 [
+    (validate.rules).enum = {defined_only: true},
+    (openapi.v3.property).description =
+        "User's gender. Only available when the user is a normal user rather than a user group"
+  ];
+  optional google.protobuf.Timestamp create_time = 15 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (openapi.v3.property).description = "Creation time for audit purposes"
+  ];
+  optional google.protobuf.Timestamp last_update = 16 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (openapi.v3.property).description = "Last update time for audit purposes"
+  ];
+}
+
+message UserId {
+  option (openapi.v3.schema).description = "UserId is a global unique identifier for each user";
+  int64 id = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (openapi.v3.property).description = "Unique identifier for each user"
+  ];
+}
+
+message UserName {
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (validate.rules).string = {min_len: 3, max_len: 64},
+    (openapi.v3.property) = {
+      min_length: 3
+      max_length: 64
+      description: "Name used when logging into the system"
+    }
+  ];
+}

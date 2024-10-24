@@ -1,0 +1,155 @@
+# Generated with protoc-gen-openapi
+# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: User Management Service
+    description: A basic user management service for example
+    version: 1.0.0
+paths:
+    /user:
+        post:
+            tags:
+                - UserManagement
+            summary: Add a user
+            description: Add a user to the system
+            operationId: UserManagement_AddUser
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/user.v1.User'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /user/{id}:
+        put:
+            tags:
+                - UserManagement
+            summary: Update a user's information
+            description: The service would first try to find if there exists a specific user by its id,and if found, user's information is then updated.
+            operationId: UserManagement_UpdateUser
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/user.v1.User'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+        delete:
+            tags:
+                - UserManagement
+            summary: Remove a user by its id
+            description: Remove a user (seemingly) by its UserId. Note that we would not truly delete the user in practice, what we do is simply set the deleted flag to true. This design is aimed to audit the operation, and we can recover the deleted user accounts at any time.
+            operationId: UserManagement_RemoveUserById
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /user/{name}:
+        get:
+            tags:
+                - UserManagement
+            summary: Find a user by its name
+            description: For user login controllers, it is common to login by using user name and password rather than UserIds. We should provide such an operation so that users can log into the system by their name and password.
+            operationId: UserManagement_FindUserByName
+            parameters:
+                - name: name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/user.v1.User'
+components:
+    schemas:
+        user.v1.User:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Unique identifier for the user
+                parentId:
+                    type: string
+                    description: Identifier of the parent user group
+                type:
+                    type: integer
+                    description: All the objects including user groups are regarded as users, so we shall use this field to identify their type.
+                    format: enum
+                name:
+                    type: string
+                    description: Username
+                password:
+                    writeOnly: true
+                    maxLength: 64
+                    minLength: 8
+                    pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,64}$
+                    type: string
+                    description: Raw password. In the database, this should be hashed password with salt.
+                twoFaMethod:
+                    type: string
+                    description: 2FA validation method
+                secret:
+                    writeOnly: true
+                    type: string
+                    description: Secret value of 2FA or just an email address
+                loginIp:
+                    readOnly: true
+                    type: string
+                    description: IP address of the last login time
+                lastLogin:
+                    readOnly: true
+                    type: string
+                    description: Date of the last login time
+                    format: date-time
+                nickname:
+                    type: string
+                    description: Optional nickname for the user
+                email:
+                    type: string
+                    description: Email address
+                phoneNumber:
+                    type: string
+                    description: Phone number
+                avatar:
+                    type: string
+                    description: Relative path of the avatar image
+                gender:
+                    type: integer
+                    description: User's gender. Only available when the user is a normal user rather than a user group
+                    format: enum
+                createTime:
+                    readOnly: true
+                    type: string
+                    description: Creation time for audit purposes
+                    format: date-time
+                lastUpdate:
+                    readOnly: true
+                    type: string
+                    description: Last update time for audit purposes
+                    format: date-time
+            description: User represents an entity who has access to a specific range of APIs
+tags:
+    - name: UserManagement
